@@ -1,0 +1,184 @@
+---
+title: "birdRange Manual"
+subtitle: "v.`r SpaDES.core::moduleMetadata(module = 'birdRange', path = '..')$version`"
+date: "Last updated: `r Sys.Date()`"
+output:
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    theme: sandstone
+    number_sections: false
+    df_print: paged
+    keep_md: yes
+editor_options:
+  chunk_output_type: console
+  bibliography: citations/references_birdRange.bib
+link-citations: true
+always_allow_html: true
+---
+
+# birdRange Module
+
+<!-- the following are text references used in captions for LaTeX compatibility -->
+(ref:birdRange) *birdRange*
+
+```{r setup-birdRange, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE, results = "hold") ## change to eval = TRUE if all chunks are to be evaluated
+
+if (!require(dplyr)) {
+  install.packages("dplyr")
+  library(dplyr)
+}
+
+dir.create("figures", showWarnings = FALSE)
+
+download.file(url = "https://img.shields.io/badge/Made%20with-Markdown-1f425f.png",
+              destfile = "figures/markdownBadge.png",
+              mode = 'wb')
+```
+
+[![made-with-Markdown](figures/markdownBadge.png)](https://commonmark.org)
+
+<!-- if knitting to pdf remember to add the pandoc_args: ["--extract-media", "."] option to yml in order to get the badge images -->
+
+#### Authors:
+
+`r paste(as.character(SpaDES.core::moduleMetadata(module = "birdRange", path = '..')$authors), sep = ', ')`
+<!-- ideally separate authors with new lines, '\n' not working -->
+
+## Module Overview
+
+### Module summary
+
+Provide a brief summary of what the module does / how to use the module.
+
+Module documentation should be written so that others can use your module.
+This is a template for module documentation, and should be changed to reflect your module.
+
+### Module inputs and parameters
+
+Describe input data required by the module and how to obtain it (e.g., directly from online sources or supplied by other modules)
+If `sourceURL` is specified, `downloadData("birdRange", "C:/Users/RALAS6/Documents/Repositories/SpaDES/modules/birdRange")` may be sufficient.
+Table \@ref(tab:moduleInputs-birdRange) shows the full list of module inputs.
+
+```{r moduleInputs-birdRange, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+df_inputs <- SpaDES.core::moduleInputs("birdRange", "C:/Users/RALAS6/Documents/Repositories/SpaDES/modules")
+knitr::kable(df_inputs,
+             caption = "List of (ref:birdRange) input objects and their description.") %>%
+  kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
+```
+
+Provide a summary of user-visible parameters (Table \@ref(tab:moduleParams-birdRange))
+
+
+```{r moduleParams-birdRange, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+df_params <- SpaDES.core::moduleParams("birdRange", "C:/Users/RALAS6/Documents/Repositories/SpaDES/modules")
+knitr::kable(df_params, caption = "List of (ref:birdRange) parameters and their description.") %>%
+  kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
+```
+
+### Events
+
+Describe what happens for each event type.
+
+### Plotting
+
+Write what is plotted.
+
+### Saving
+
+Write what is saved.
+
+### Module outputs
+
+Description of the module outputs (Table \@ref(tab:moduleOutputs-birdRange)).
+
+```{r moduleOutputs-birdRange, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
+df_outputs <- SpaDES.core::moduleOutputs("birdRange", "C:/Users/RALAS6/Documents/Repositories/SpaDES/modules")
+knitr::kable(df_outputs, caption = "List of (ref:birdRange) outputs and their description.") %>%
+  kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
+```
+
+### Links to other modules
+
+Describe any anticipated linkages to other modules, such as modules that supply input data or do post-hoc analysis.
+
+### Getting help
+
+-   provide a way for people to obtain help (e.g., module repository issues page)
+
+### EXAMPLE CODE TO RUN MODULE
+
+```{r moduleRun}
+
+library("conflicted")
+library("SpaDES.core")
+library("googledrive")
+
+## make a list of directory paths
+inputsDir <- checkPath("C:/Users/RALAS6/Documents/Repositories/SpaDES/inputs", create = TRUE)
+outputsDir <- checkPath("C:/Users/RALAS6/Documents/Repositories/SpaDES/outputs", create = TRUE)
+downloadFolderArea <- checkPath(file.path(inputsDir, "studyArea"), create = TRUE)
+downloadFolderBird <- checkPath(file.path(inputsDir, "birdRasterFiles"), create = TRUE)
+setPaths(modulePath = file.path("C:/Users/RALAS6/Documents/Repositories/SpaDES/modules"),
+         cachePath = file.path("C:/Users/RALAS6/Documents/Repositories/SpaDES/cache"),
+         scratchPath = file.path("C:/Users/RALAS6/Documents/Repositories/SpaDES/scratch"),
+         inputPath = inputsDir,
+         outputPath = outputsDir)
+
+simPaths <- getPaths()
+
+# #parameters from Drive
+# folderUrlBirdRaster <- ""
+# rasterToMatchLocation <- as_id("https://drive.google.com/file/d/1dprb9sQZAUP6ty4BOQMbFf4gSiHKnvqp/view?usp=share_link")
+# rasterToMatchName <- "LCC2005_V1_4a.tif"
+# nameBCR <- "60"
+# 
+# ### STUDY AREA AB
+# studyAreaLocation <- file.path("https://drive.google.com/file/d/1iYXdXFcZex304o5voX6igFm5EC0ck1Bp/view?usp=sharing")
+# #specify file name
+# .studyAreaName <- "studyAreaAB.shp" #specify file name
+#  #specify folder url
+# archiveStudyArea <- "studyAreaAB.zip" #give archive name
+
+#parameters from local
+rasterToMatchLocation <- inputsDir
+rasterToMatchName <- "LCC2005_V1_4a.tif"
+studyAreaLocation <- downloadFolderArea
+nameBCR <- "60"
+.studyAreaName <- "studyAreaAB.shp"
+folderUrlBirdRaster <- downloadFolderBird
+
+
+
+
+
+simModules <- list("birdRange")
+
+## Set simulation and module parameters
+simTimes <- list(start = 1, end = 1, timeunit = "year")
+simParams <- list(
+    birdRange = list( 
+               .doSelectInitialTime = 1,
+               fromDrive = FALSE,
+               folderUrlBirdRaster = folderUrlBirdRaster,
+               .studyAreaName = .studyAreaName,
+               #archiveStudyArea = archiveStudyArea,
+               rasterToMatchLocation = rasterToMatchLocation,
+               rasterToMatchName = rasterToMatchName,
+               studyAreaLocation = studyAreaLocation,
+               nameBCR = nameBCR,
+               densityThreshold = 0.04
+               )
+)
+
+
+
+## Simulation setup
+mySim <- simInit(times = simTimes, params = simParams, 
+                 modules = simModules, paths = simPaths)
+
+test <- spades(mySim)
+
+```
+
