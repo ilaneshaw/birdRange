@@ -48,8 +48,12 @@ defineModule(sim, list(
                     "the location of the bird density rasters"),
     defineParameter("fromDrive", "logical", TRUE, NA, NA,
                     "Should the rasterToMatch, studyArea and bird Rasters be found on Google Drive or a similar online source? If false, they should already be on your local computer."),
-    defineParameter("densityThreshold", "numeric", NA, NA, NA,
-                    "The minimum bird density that must be reached for species to be considered present"),
+    defineParameter("excludeList", "character", NA, NA, NA,
+                    "a list of species codes, for species that should not be included, regardless of their densities"),
+    defineParameter("areaThreshold", "numeric", 0.05, 0, 1,
+                    "The minimum area over which the probability of occurrence threshold must be reached for species to be considered present"),
+    defineParameter("probOfOccurrenceThreshold", "numeric", 0.5, 0, 1,
+                    "The minimum probability of occurence that must be reached for species to be considered present"),
     ## .seed is optional: `list('init' = 123)` will `set.seed(123)` for the `init` event only.
     defineParameter(".seed", "list", list(), NA, NA,
                     "Named list of seeds to use for each event (names)."),
@@ -184,9 +188,17 @@ selectBirds <- function(sim) {
   # THE NEXT TWO LINES ARE FOR DUMMY UNIT TESTS; CHANGE OR DELETE THEM.
   # sim$event1Test1 <- " this is test for event 1. " # for dummy unit test
   # sim$event1Test2 <- 999 # for dummy unit test
-
+  
+  # Calculate the density threshold for the given probability of occurrence threshold 
+  ps <- 6.25  # pixel size in hectares conversion rate
+  densityThreshold <- -base::log(1 - P(sim)$probOfOccurrenceThreshold) / ps
+  print(paste("with a probability of occurrence threshold of ", P(sim)$probOfOccurrenceThreshold, " a density threshold of ", densityThreshold, " is required", sep = "" ))
+  
+ 
   sim$birdList <- lapply(X = sim$birdRasters, FUN = function(birdRaster){
-   tryCatch({
+   #tryCatch({
+     
+     
      print(birdRaster)
     ## take the values from the rasters and input 
     ## them to a data table called cellValues
@@ -194,20 +206,28 @@ selectBirds <- function(sim) {
      Plot(birdRaster, na.color = "grey")
      hist(birdRaster)
      
-    nameBird <- names(birdRaster)
-    densityValues <- terra::values(birdRaster)
-    densityValues <- na.omit(densityValues)
-    maxValue <- max(densityValues)
-    meetsThreshold <- ifelse(maxValue < P(sim)$densityThreshold, NA, nameBird)
+     nameBird <- names(birdRaster)
+     densityValues <- terra::values(birdRaster)
+     densityValues <- na.omit(densityValues)
+     noCells <- length(densityValues)
+     meetsDensityThreshold <- sum(densityValues > densityThreshold)
+     propArea <- meetsDensityThreshold/noCells
+     meetsThreshold <-  propArea >= P(sim)$areaThreshold
     
+     if(meetsThreshold == TRUE){
+       return(nameBird)
+     } else {
+       return(NA)
+     }
+     
     
-    return(meetsThreshold)
-    }, error = function(e) return(NA))
+    #}, error = function(e) return(NA))
   })
-  browser()
+
    sim$birdList <- unlist(sim$birdList, use.names = FALSE)
   sim$birdList <- na.omit(sim$birdList)
   sim$birdList <- unlist(lapply(sim$birdList, substr, 8, 11)) #works for strings of the form "mosaic-XXXX-run3.tif"
+  sim$birdList <- setdiff(sim$birdList, P(sim)$excludeList)
    #sim$birdList <- unlist(lapply(sim$birdList, substr, 1, 4)) #works for strings of the form "XXXX-meanboot_60.tif"
    
    #get names of all birds looked at
@@ -238,7 +258,7 @@ selectBirds <- function(sim) {
     print("birds that meet Threshold:")
     print(sim$birdList)
     
-    print("birds that did not meet threshold:")
+    print("birds that did not meet threshold, or were in the excludeList:")
     print(sim$abscentBirds)
     
   # ! ----- STOP EDITING ----- ! #
@@ -276,104 +296,104 @@ Event2 <- function(sim) {
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
   # ! ----- EDIT BELOW ----- ! #
-  if (P(sim)$fromDrive == TRUE) {
-    
-    ### GET FILES FROM GOOGLE DRIVE ###
-    #get RasterToMatch
-    print("download rasterToMatch")
-    rasterToMatch <-  googledrive::drive_download(
-      file = P(sim)$rasterToMatchLocation,
-      overwrite = TRUE,
-      verbose = TRUE,
-      path = file.path(inputsDir, P(sim)$rasterToMatchName)) #download rasterTomatch from drive
-    sim$rasterToMatch <- terra::rast(file.path(inputsDir, P(sim)$rasterToMatchName)) #load raster into R
-    
-    # get studyArea shapefile
-    print("get studyArea shapefile from drive")
-    sim$studyArea <- prepInputs(targetFile = P(sim)$.studyAreaName,
-                                url = P(sim)$studyAreaLocation,
-                                archive = P(sim)$archiveStudyArea,
-                                alsoExtract = "similar", #Extract other files with similar names
-                                destinationPath = downloadFolderArea, #folder to download to
-                                #fun = "terra::vect", #use the function shapefile
-                                useTerra = TRUE,
-                                targetCRS = crs(sim$rasterToMatch), #make crs same as rasterToMatch
-                                overwrite = TRUE,
-                                verbose = TRUE)
-    
-    #crop and mask rasterTomatch to studyArea
-    sim$rasterToMatch <- terra::mask(terra::crop(sim$rasterToMatch, sim$studyArea), sim$studyArea)
-    names(sim$rasterToMatch) <- "rasterToMatch"
-    # dev()
-    # clearPlot()
-    # Plot(sim$rasterToMatch, na.color= "grey")
-   
- 
-    #get bird density rasters
-    patternNameBirdRaster <- "mosaic-" #choose naming pattern to look for
-    
-    ## drive_ls function is used to list all the files it finds using the folder url with the given pattern
-    sim$allBirdRasters <-
-      googledrive::drive_ls(path = as_id(P(sim)$folderUrlBirdRaster),
-                            pattern = patternNameBirdRaster)
-    
-    print(sim$allBirdRasters$name)
-    
-    
-    
-    # grepl function searches for all items in the allBirdRasters that are on birdList & stores their names in rastersforBirdList
-    # sim$rastersForBirdList <-
-    #   allBirdRasters$name[grepl(pattern = paste(P(sim)$birdList, collapse = "|"),
-    #                              x = allBirdRasters$name)]
-    
-    ## for each item in turn from rastersForBirdlist the following function is applied:
-    sim$birdList <-
-      lapply(
-        X = sim$rastersForBirdList,
-        FUN = function(rasterFile) {
-          
-          nameBird <- substr(rasterFile, 8, 11) #works for strings of the form "mosaic-XXXX-run3.tif"
-          nameBird <- paste(nameBird, ".tif", sep = "")
-          
-          ## if the item in rastersForBirdList is not already present at rastersPath, googledrive package downloads it
-          if (!file.exists(file.path(downloadFolderBird, rasterFile))) {
-            googledrive::drive_download(
-              file = as_id(allBirdRasters[allBirdRasters$name %in% rasterFile,]$id),
-              overwrite = TRUE,
-              path = file.path(downloadFolderBird, nameBird)
-              
-            )
-          }
-          
-          ## otherwise, if it is already present and downloaded, just get the name of the item
-          return(terra::rast(file.path(downloadFolderBird, nameBird)))
-        }
-      )
-    
-    # #get the species codes as names for the downloadedRasters object, rather than using the whole filepath
-    # X <- lapply(sim$rastersForBirdList, substr, 8, 11) #works for strings of the form "mosaic-XXXX-run3.tif"
-    # names(sim$birdRasters) <- X
-    
-    sim$birdRasters <- lapply(X = sim$birdRasters, FUN = function(RasterLayer) {
-      ## the function postProcesses the layer, cropping and masking it to a given study area and rasterToMatch, and saving it to a given destination path
-      
-      proRaster <- reproducible::postProcess(RasterLayer,
-                                             #studyArea = sim$studyArea,
-                                             rasterToMatch = sim$rasterToMatch,
-                                             useTerra = TRUE,
-                                             fun = "terra::rast",
-                                             destinationPath = downloadFolderBird,
-                                             filename2 = paste(downloadFolderBird, "/", names(RasterLayer), ".tif", sep = ""),
-                                             overwrite = TRUE,
-                                             verbose = TRUE)
-      # clearPlot()
-      # Plot(proRaster, na.color= "grey")
-      return(proRaster)
-    })
-    
-    
-  } else {
-    
+  # if (P(sim)$fromDrive == TRUE) {
+  #   
+  #   ### GET FILES FROM GOOGLE DRIVE ###
+  #   #get RasterToMatch
+  #   print("download rasterToMatch")
+  #   rasterToMatch <-  googledrive::drive_download(
+  #     file = P(sim)$rasterToMatchLocation,
+  #     overwrite = TRUE,
+  #     verbose = TRUE,
+  #     path = file.path(inputsDir, P(sim)$rasterToMatchName)) #download rasterTomatch from drive
+  #   sim$rasterToMatch <- terra::rast(file.path(inputsDir, P(sim)$rasterToMatchName)) #load raster into R
+  #   
+  #   # get studyArea shapefile
+  #   print("get studyArea shapefile from drive")
+  #   sim$studyArea <- prepInputs(targetFile = P(sim)$.studyAreaName,
+  #                               url = P(sim)$studyAreaLocation,
+  #                               archive = P(sim)$archiveStudyArea,
+  #                               alsoExtract = "similar", #Extract other files with similar names
+  #                               destinationPath = downloadFolderArea, #folder to download to
+  #                               #fun = "terra::vect", #use the function shapefile
+  #                               useTerra = TRUE,
+  #                               targetCRS = crs(sim$rasterToMatch), #make crs same as rasterToMatch
+  #                               overwrite = TRUE,
+  #                               verbose = TRUE)
+  #   
+  #   #crop and mask rasterTomatch to studyArea
+  #   sim$rasterToMatch <- terra::mask(terra::crop(sim$rasterToMatch, sim$studyArea), sim$studyArea)
+  #   names(sim$rasterToMatch) <- "rasterToMatch"
+  #   # dev()
+  #   # clearPlot()
+  #   # Plot(sim$rasterToMatch, na.color= "grey")
+  #  
+  # 
+  #   #get bird density rasters
+  #   patternNameBirdRaster <- "mosaic-" #choose naming pattern to look for
+  #   
+  #   ## drive_ls function is used to list all the files it finds using the folder url with the given pattern
+  #   sim$allBirdRasters <-
+  #     googledrive::drive_ls(path = as_id(P(sim)$folderUrlBirdRaster),
+  #                           pattern = patternNameBirdRaster)
+  #   
+  #   print(sim$allBirdRasters$name)
+  #   
+  #   
+  #   
+  #   # grepl function searches for all items in the allBirdRasters that are on birdList & stores their names in rastersforBirdList
+  #   # sim$rastersForBirdList <-
+  #   #   allBirdRasters$name[grepl(pattern = paste(P(sim)$birdList, collapse = "|"),
+  #   #                              x = allBirdRasters$name)]
+  #   
+  #   ## for each item in turn from rastersForBirdlist the following function is applied:
+  #   sim$birdList <-
+  #     lapply(
+  #       X = sim$rastersForBirdList,
+  #       FUN = function(rasterFile) {
+  #         
+  #         nameBird <- substr(rasterFile, 8, 11) #works for strings of the form "mosaic-XXXX-run3.tif"
+  #         nameBird <- paste(nameBird, ".tif", sep = "")
+  #         
+  #         ## if the item in rastersForBirdList is not already present at rastersPath, googledrive package downloads it
+  #         if (!file.exists(file.path(downloadFolderBird, rasterFile))) {
+  #           googledrive::drive_download(
+  #             file = as_id(allBirdRasters[allBirdRasters$name %in% rasterFile,]$id),
+  #             overwrite = TRUE,
+  #             path = file.path(downloadFolderBird, nameBird)
+  #             
+  #           )
+  #         }
+  #         
+  #         ## otherwise, if it is already present and downloaded, just get the name of the item
+  #         return(terra::rast(file.path(downloadFolderBird, nameBird)))
+  #       }
+  #     )
+  #   
+  #   # #get the species codes as names for the downloadedRasters object, rather than using the whole filepath
+  #   # X <- lapply(sim$rastersForBirdList, substr, 8, 11) #works for strings of the form "mosaic-XXXX-run3.tif"
+  #   # names(sim$birdRasters) <- X
+  #   
+  #   sim$birdRasters <- lapply(X = sim$birdRasters, FUN = function(RasterLayer) {
+  #     ## the function postProcesses the layer, cropping and masking it to a given study area and rasterToMatch, and saving it to a given destination path
+  #     
+  #     proRaster <- reproducible::postProcess(RasterLayer,
+  #                                            #studyArea = sim$studyArea,
+  #                                            rasterToMatch = sim$rasterToMatch,
+  #                                            useTerra = TRUE,
+  #                                            fun = "terra::rast",
+  #                                            destinationPath = downloadFolderBird,
+  #                                            filename2 = paste(downloadFolderBird, "/", names(RasterLayer), ".tif", sep = ""),
+  #                                            overwrite = TRUE,
+  #                                            verbose = TRUE)
+  #     # clearPlot()
+  #     # Plot(proRaster, na.color= "grey")
+  #     return(proRaster)
+  #   })
+  #   
+  #   
+  # } else {
+  
     ### GET FILES FROM LOCAL LOCATION ###
     
     #get rasterToMatch
@@ -401,7 +421,7 @@ Event2 <- function(sim) {
     
    
      #get bird density rasters
-    sim$allBirdRasters <- sort(list.files(downloadFolderBird, pattern = ".tif")) #list all bird raster files with a given naming pattern
+    sim$allBirdRasters <- sort(list.files(downloadFolderBird, pattern = "mosaic-")) #list all bird raster files with a given naming pattern
     #sim$allBirdRasters <- sort(list.files(downloadFolderBird, pattern = "-meanBoot_60")) #list all bird raster files with a given naming pattern
     print(sim$allBirdRasters)
     ## for each item in turn from rastersForBirdlist the following function is applied:
@@ -436,7 +456,7 @@ Event2 <- function(sim) {
     
 
     
-  }
+  #}
 
   print(sim$birdRasters)
   #sim$allBirdNames <- names(sim$birdRasters)
