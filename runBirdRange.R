@@ -18,7 +18,7 @@ setPaths(modulePath = file.path("../../modules"),
 simPaths <- getPaths()
 
 # #parameters from Drive
-# folderUrlBirdRaster <- ""
+# folderUrlBirdRaster <- "https://drive.google.com/drive/folders/11HdfTqNhHmzJ8Qk0Pk0NfiLKwyRkrltS"
 # rasterToMatchLocation <- as_id("https://drive.google.com/file/d/1dprb9sQZAUP6ty4BOQMbFf4gSiHKnvqp/view?usp=share_link")
 # rasterToMatchName <- "LCC2005_V1_4a.tif"
 # nameBCR <- "60"
@@ -35,11 +35,9 @@ rasterToMatchLocation <- inputsDir
 rasterToMatchName <- "LCC2005_V1_4a.tif"
 studyAreaLocation <- downloadFolderArea
 nameBCR <- "60"
-#.studyAreaName <- "studyAreaAB.shp"
-.studyAreaName <- "BCR6_BC.shp"
+.studyAreaName <- "studyArea_AB_BCR6.shp"
 folderUrlBirdRaster <- downloadFolderBird
-
-
+excludeList <- c("EUST", "HOSP", "ROPI")
 
 
 
@@ -58,8 +56,9 @@ simParams <- list(
     rasterToMatchName = rasterToMatchName,
     studyAreaLocation = studyAreaLocation,
     nameBCR = nameBCR,
-    densityThreshold = 0.01
-    
+    excludeList = excludeList,
+    areaThreshold = 0.05,
+    probOfOccurrenceThreshold = 0.5
   )
 )
 
