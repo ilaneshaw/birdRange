@@ -113,16 +113,16 @@ Describe any anticipated linkages to other modules, such as modules that supply 
 
 library("conflicted")
 library("SpaDES.core")
-library("googledrive")
+#library("googledrive")
 
 ## make a list of directory paths
-inputsDir <- checkPath("C:/Users/RALAS6/Documents/Repositories/SpaDES/inputs", create = TRUE)
-outputsDir <- checkPath("C:/Users/RALAS6/Documents/Repositories/SpaDES/outputs", create = TRUE)
+inputsDir <- checkPath("../../inputs", create = TRUE)
+outputsDir <- checkPath("../../outputs", create = TRUE)
 downloadFolderArea <- checkPath(file.path(inputsDir, "studyArea", "studyArea_AB_BCR6"), create = TRUE)
 downloadFolderBird <- checkPath(file.path(inputsDir, "birdRasterFiles"), create = TRUE)
-setPaths(modulePath = file.path("C:/Users/RALAS6/Documents/Repositories/SpaDES/modules"),
-         cachePath = file.path("C:/Users/RALAS6/Documents/Repositories/SpaDES/cache"),
-         scratchPath = file.path("C:/Users/RALAS6/Documents/Repositories/SpaDES/scratch"),
+setPaths(modulePath = file.path("../../modules"),
+         cachePath = file.path("../../cache"),
+         scratchPath = file.path("../../scratch"),
          inputPath = inputsDir,
          outputPath = outputsDir)
 

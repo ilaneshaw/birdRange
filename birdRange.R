@@ -421,7 +421,7 @@ Event2 <- function(sim) {
     
    
      #get bird density rasters
-    sim$allBirdRasters <- sort(list.files(downloadFolderBird, pattern = "mosaic-")) #list all bird raster files with a given naming pattern
+    sim$allBirdRasters <- sort(list.files(downloadFolderBird, pattern = ".tif")) #list all bird raster files with a given naming pattern
     #sim$allBirdRasters <- sort(list.files(downloadFolderBird, pattern = "-meanBoot_60")) #list all bird raster files with a given naming pattern
     print(sim$allBirdRasters)
     ## for each item in turn from rastersForBirdlist the following function is applied:
