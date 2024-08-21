@@ -196,15 +196,15 @@ selectBirds <- function(sim) {
   
  
   sim$birdList <- lapply(X = sim$birdRasters, FUN = function(birdRaster){
-   #tryCatch({
+   tryCatch({
      
      
      print(birdRaster)
     ## take the values from the rasters and input 
     ## them to a data table called cellValues
-     clearPlot()
-     Plot(birdRaster, na.color = "grey")
-     hist(birdRaster)
+     # clearPlot()
+     # Plot(birdRaster, na.color = "grey")
+     # hist(birdRaster)
      
      nameBird <- names(birdRaster)
      densityValues <- terra::values(birdRaster)
@@ -215,26 +215,28 @@ selectBirds <- function(sim) {
      meetsThreshold <-  propArea >= P(sim)$areaThreshold
     
      if(meetsThreshold == TRUE){
+       print(paste(nameBird, " meets threshold", sep = ""))
        return(nameBird)
      } else {
+       print(paste(nameBird, " doesn't meet threshold", sep = ""))
        return(NA)
      }
      
     
-    #}, error = function(e) return(NA))
+    }, error = function(e) return(NA))
   })
 
    sim$birdList <- unlist(sim$birdList, use.names = FALSE)
   sim$birdList <- na.omit(sim$birdList)
-  sim$birdList <- unlist(lapply(sim$birdList, substr, 8, 11)) #works for strings of the form "mosaic-XXXX-run3.tif"
+  #sim$birdList <- unlist(lapply(sim$birdList, substr, 8, 11)) #works for strings of the form "mosaic-XXXX-run3.tif"
+  sim$birdList <- unlist(lapply(sim$birdList, substr, 1, 4)) #works for strings of the form "XXXX-meanboot_60.tif"
   sim$birdList <- setdiff(sim$birdList, P(sim)$excludeList)
-   #sim$birdList <- unlist(lapply(sim$birdList, substr, 1, 4)) #works for strings of the form "XXXX-meanboot_60.tif"
-   
+  
    #get names of all birds looked at
    sim$allBirds <-  lapply(X = sim$birdRasters, FUN = function(birdRaster){
      nameRas <- names(birdRaster)
-     nameRas <- substr(nameRas, 8, 11) #works for strings of the form "mosaic-XXXX-run3.tif"
-     #nameRas <- substr(nameRas, 1, 4) #works for strings of the form "XXXX-meanboot_60.tif"
+     #nameRas <- substr(nameRas, 8, 11) #works for strings of the form "mosaic-XXXX-run3.tif"
+     nameRas <- substr(nameRas, 1, 4) #works for strings of the form "XXXX-meanboot_60.tif"
          return(nameRas)
    })
    sim$allBirds <- unlist(sim$allBirds, use.names = FALSE)
@@ -406,7 +408,7 @@ Event2 <- function(sim) {
     studyArea <- terra::vect(file.path(P(sim)$studyAreaLocation, P(sim)$.studyAreaName))
     
     #postProcess studyArea
-    sim$studyArea <- reproducible::postProcess(studyArea,
+    sim$studyArea <- reproducible::Cache(reproducible::postProcess, studyArea,
                                                destinationPath = downloadFolderArea,
                                                filename2 = "studyArea", 
                                                useTerra = TRUE,
@@ -416,13 +418,14 @@ Event2 <- function(sim) {
                                                verbose = TRUE)
     
     #crop and mask rasterToMatch
-    sim$rasterToMatch <- terra::mask(terra::crop(sim$rasterToMatch, sim$studyArea), sim$studyArea) 
+    sim$rasterToMatch <- reproducible::Cache(terra::crop, sim$rasterToMatch, sim$studyArea)
+    sim$rasterToMatch <- reproducible::Cache(terra::mask, sim$rasterToMatch, sim$studyArea) 
     names(sim$rasterToMatch) <- "rasterToMatch"
     
    
      #get bird density rasters
-    sim$allBirdRasters <- sort(list.files(downloadFolderBird, pattern = ".tif")) #list all bird raster files with a given naming pattern
-    #sim$allBirdRasters <- sort(list.files(downloadFolderBird, pattern = "-meanBoot_60")) #list all bird raster files with a given naming pattern
+    #sim$allBirdRasters <- sort(list.files(downloadFolderBird, pattern = ".tif")) #list all bird raster files with a given naming pattern
+    sim$allBirdRasters <- sort(list.files(downloadFolderBird, pattern = "-meanBoot")) #list all bird raster files with a given naming pattern
     print(sim$allBirdRasters)
     ## for each item in turn from rastersForBirdlist the following function is applied:
     sim$birdRasters <-
