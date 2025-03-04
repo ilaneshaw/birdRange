@@ -18,13 +18,13 @@ setPaths(modulePath = file.path("../../modules"),
 simPaths <- getPaths()
 
 # #parameters from Drive
-# folderUrlBirdRaster <- "https://drive.google.com/drive/folders/11HdfTqNhHmzJ8Qk0Pk0NfiLKwyRkrltS"
-# rasterToMatchLocation <- as_id("https://drive.google.com/file/d/1dprb9sQZAUP6ty4BOQMbFf4gSiHKnvqp/view?usp=share_link")
+# folderUrlBirdRaster <- ""
+# rasterToMatchLocation <- as_id("")
 # rasterToMatchName <- "LCC2005_V1_4a.tif"
 # nameBCR <- "60"
 # 
 # ### STUDY AREA AB
-# studyAreaLocation <- file.path("https://drive.google.com/file/d/1iYXdXFcZex304o5voX6igFm5EC0ck1Bp/view?usp=sharing")
+# studyAreaLocation <- file.path(")
 # #specify file name
 # .studyAreaName <- "studyAreaAB.shp" #specify file name
 #  #specify folder url
