@@ -1,71 +1,59 @@
+
 library("conflicted")
 library("SpaDES.core")
-#library("googledrive")
+# library("googledrive")
+
 
 ## make a list of directory paths
-inputsDir <- checkPath("../../inputs", create = TRUE)
-outputsDir <- checkPath("../../outputs", create = TRUE)
-downloadFolderArea <- checkPath(file.path(inputsDir, "studyArea"), create = TRUE)
-downloadFolderBird <- checkPath(file.path(inputsDir, "birdRasterFiles"), create = TRUE)
-outputMeanBirdRasters <- checkPath(file.path(outputsDir, "birds"), create = TRUE)
-setPaths(modulePath = file.path("../../modules"),
-         cachePath = file.path("../../cache"),
-         scratchPath = file.path("../../scratch"),
-         inputPath = inputsDir,
-         outputPath = outputsDir)
-
-
+setPaths(
+  modulePath = file.path("../../modules"),
+  cachePath = file.path("../../cache"),
+  scratchPath = file.path("../../scratch"),
+  inputPath = file.path("../../inputs"),
+  outputPath = file.path("../../outputs/birdRange")
+)
 simPaths <- getPaths()
 
-# #parameters from Drive
-# folderUrlBirdRaster <- ""
-# rasterToMatchLocation <- as_id("")
-# rasterToMatchName <- "LCC2005_V1_4a.tif"
-# nameBCR <- "60"
-# 
-# ### STUDY AREA AB
-# studyAreaLocation <- file.path(")
-# #specify file name
-# .studyAreaName <- "studyAreaAB.shp" #specify file name
-#  #specify folder url
-# archiveStudyArea <- "studyAreaAB.zip" #give archive name
+# specify where inputs come from
+locationRasterToMatch <- Paths$inputPath
+rasterToMatchName <- "ALFL-meanBoot_BCR-60_studyArea_AB_BCR6"
 
-#parameters from local
-rasterToMatchLocation <- inputsDir
-rasterToMatchName <- "LCC2005_V1_4a.tif"
-studyAreaLocation <- downloadFolderArea
-nameBCR <- "60"
+studyAreaLocation <- checkPath(file.path(Paths$inputPath, "studyArea/studyArea_AB_BCR6"), create = TRUE)
 .studyAreaName <- "studyArea_AB_BCR6.shp"
-folderUrlBirdRaster <- downloadFolderBird
-excludeList <- c("EUST", "HOSP", "ROPI")
 
+locationSpRas <- checkPath(file.path(Paths$inputPath, "meanSpRasters"), create = TRUE)
 
+nameBCR <- "60"
 
-simModules <- list("birdRange")
+excludeList <- c("EUST", "HOSP", "ROPI") # specify any species to exclude- here, non-native species
+
 
 ## Set simulation and module parameters
+simModules <- list("birdRange")
 simTimes <- list(start = 1, end = 1, timeunit = "year")
 simParams <- list(
-  birdRange = list( 
+  birdRange = list(
     .doSelectInitialTime = 1,
     fromDrive = FALSE,
-    folderUrlBirdRaster = folderUrlBirdRaster,
+    locationSpRas = locationSpRas,
     .studyAreaName = .studyAreaName,
-    #archiveStudyArea = archiveStudyArea,
-    rasterToMatchLocation = rasterToMatchLocation,
+    # archiveStudyArea = archiveStudyArea,
+    rasterToMatchLocation = locationRasterToMatch,
     rasterToMatchName = rasterToMatchName,
     studyAreaLocation = studyAreaLocation,
     nameBCR = nameBCR,
     excludeList = excludeList,
-    areaThreshold = 0.05,
-    probOfOccurrenceThreshold = 0.5
+    areaThreshold = 0.01,
+    probOfOccurrenceThreshold = 0.25
   )
 )
 
 
-
 ## Simulation setup
-mySim <- simInit(times = simTimes, params = simParams, 
-                 modules = simModules, paths = simPaths)
+mySim <- simInit(
+  times = simTimes, params = simParams,
+  modules = simModules, paths = simPaths
+)
 
 test <- spades(mySim)
+
