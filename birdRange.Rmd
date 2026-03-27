@@ -121,7 +121,7 @@ setPaths(
   cachePath = file.path("../../cache"),
   scratchPath = file.path("../../scratch"),
   inputPath = file.path("../../inputs"),
-  outputPath = file.path("../../outputs/birdRange")
+  outputPath = file.path("../../outputs")
 )
 simPaths <- getPaths()
 
@@ -150,6 +150,10 @@ zen4R::download_zenodo(doi = "10.5281/zenodo.17516504", path = locationSpRas)
 unzip(file.path(locationSpRas, "meanSpRasters.zip"), exdir = locationSpRas)
 locationSpRas <- file.path(Paths$inputPath, "meanSpRasters")
 
+#specify where to save birdList
+saveLocation <- checkPath(file.path(Paths$inputPath, "speciesList"), create = TRUE)
+nameBirdList <- "birdList_AB"
+  
 # specify any species to exclude- here, we exclude non-native species
 excludeList <- c("EUST", "HOSP", "ROPI")
 
@@ -168,10 +172,11 @@ simParams <- list(
     nameBCR = nameBCR,
     excludeList = excludeList,
     areaThreshold = 0.01,
-    probOfOccurrenceThreshold = 0.25
+    probOfOccurrenceThreshold = 0.25,
+    saveLocation = saveLocation,
+    nameBirdList = nameBirdList
   )
 )
-
 
 ## Simulation setup
 mySim <- simInit(

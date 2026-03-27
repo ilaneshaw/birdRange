@@ -89,6 +89,14 @@ defineModule(sim, list(
       "probOfOccurrenceThreshold", "numeric", 0.5, 0, 1,
       "The minimum probability of occurence that must be reached for species to be considered present"
     ),
+    defineParameter(
+      "saveLocation", "character", "Paths$outputPath", NA, NA,
+      "where to save a csv copy of the birdList"
+    ),
+    defineParameter(
+      "nameBirdList", "character", "birdList", NA, NA,
+      "what to name saved csv birdList file"
+    ),
     ## .seed is optional: `list('init' = 123)` will `set.seed(123)` for the `init` event only.
     defineParameter(
       ".seed", "list", list(), NA, NA,
@@ -114,79 +122,79 @@ defineModule(sim, list(
 
 doEvent.birdRange <- function(sim, eventTime, eventType) {
   switch(eventType,
-    init = {
-      ### check for more detailed object dependencies:
-      ### (use `checkObject` or similar)
-
-      # do stuff for this event
-      sim <- Init(sim)
-
-      # schedule future event(s)
-      sim <- scheduleEvent(sim, P(sim)$.doSelectInitialTime, "birdRange", "selectBirds")
-      sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "birdRange", "plot")
-      sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "birdRange", "save")
-    },
-    plot = {
-      # ! ----- EDIT BELOW ----- ! #
-      # do stuff for this event
-
-      plotFun(sim) # example of a plotting function
-      # schedule future event(s)
-
-      # e.g.,
-      # sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "birdRange", "plot")
-
-      # ! ----- STOP EDITING ----- ! #
-    },
-    save = {
-      # ! ----- EDIT BELOW ----- ! #
-      # do stuff for this event
-
-      # e.g., call your custom functions/methods here
-      # you can define your own methods below this `doEvent` function
-
-      # schedule future event(s)
-
-      # e.g.,
-      # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "birdRange", "save")
-
-      # ! ----- STOP EDITING ----- ! #
-    },
-    selectBirds = {
-      # ! ----- EDIT BELOW ----- ! #
-      # do stuff for this event
-
-      # e.g., call your custom functions/methods here
-      # you can define your own methods below this `doEvent` function
-      sim <- selectBirds(sim)
-      # schedule future event(s)
-      sim <- scheduleEvent(sim,
-        eventTime = time(sim) + P(sim)$selectInterval,
-        moduleName = "birdRange", eventType = "selectBirds"
-      )
-      # e.g.,
-      # sim <- scheduleEvent(sim, time(sim) + increment, "birdRange", "templateEvent")
-
-      # ! ----- STOP EDITING ----- ! #
-    },
-    event2 = {
-      # ! ----- EDIT BELOW ----- ! #
-      # do stuff for this event
-
-      # e.g., call your custom functions/methods here
-      # you can define your own methods below this `doEvent` function
-
-      # schedule future event(s)
-
-      # e.g.,
-      # sim <- scheduleEvent(sim, time(sim) + increment, "birdRange", "templateEvent")
-
-      # ! ----- STOP EDITING ----- ! #
-    },
-    warning(paste("Undefined event type: \'", current(sim)[1, "eventType", with = FALSE],
-      "\' in module \'", current(sim)[1, "moduleName", with = FALSE], "\'",
-      sep = ""
-    ))
+         init = {
+           ### check for more detailed object dependencies:
+           ### (use `checkObject` or similar)
+           
+           # do stuff for this event
+           sim <- Init(sim)
+           
+           # schedule future event(s)
+           sim <- scheduleEvent(sim, P(sim)$.doSelectInitialTime, "birdRange", "selectBirds")
+           sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "birdRange", "plot")
+           sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "birdRange", "save")
+         },
+         plot = {
+           # ! ----- EDIT BELOW ----- ! #
+           # do stuff for this event
+           
+           plotFun(sim) # example of a plotting function
+           # schedule future event(s)
+           
+           # e.g.,
+           # sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "birdRange", "plot")
+           
+           # ! ----- STOP EDITING ----- ! #
+         },
+         save = {
+           # ! ----- EDIT BELOW ----- ! #
+           # do stuff for this event
+           
+           # e.g., call your custom functions/methods here
+           # you can define your own methods below this `doEvent` function
+           
+           # schedule future event(s)
+           
+           # e.g.,
+           # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "birdRange", "save")
+           
+           # ! ----- STOP EDITING ----- ! #
+         },
+         selectBirds = {
+           # ! ----- EDIT BELOW ----- ! #
+           # do stuff for this event
+           
+           # e.g., call your custom functions/methods here
+           # you can define your own methods below this `doEvent` function
+           sim <- selectBirds(sim)
+           # schedule future event(s)
+           sim <- scheduleEvent(sim,
+                                eventTime = time(sim) + P(sim)$selectInterval,
+                                moduleName = "birdRange", eventType = "selectBirds"
+           )
+           # e.g.,
+           # sim <- scheduleEvent(sim, time(sim) + increment, "birdRange", "templateEvent")
+           
+           # ! ----- STOP EDITING ----- ! #
+         },
+         event2 = {
+           # ! ----- EDIT BELOW ----- ! #
+           # do stuff for this event
+           
+           # e.g., call your custom functions/methods here
+           # you can define your own methods below this `doEvent` function
+           
+           # schedule future event(s)
+           
+           # e.g.,
+           # sim <- scheduleEvent(sim, time(sim) + increment, "birdRange", "templateEvent")
+           
+           # ! ----- STOP EDITING ----- ! #
+         },
+         warning(paste("Undefined event type: \'", current(sim)[1, "eventType", with = FALSE],
+                       "\' in module \'", current(sim)[1, "moduleName", with = FALSE], "\'",
+                       sep = ""
+         ))
   )
   return(invisible(sim))
 }
@@ -197,9 +205,9 @@ doEvent.birdRange <- function(sim, eventTime, eventType) {
 ### template initialization
 Init <- function(sim) {
   # # ! ----- EDIT BELOW ----- ! #
-
+  
   # ! ----- STOP EDITING ----- ! #
-
+  
   return(invisible(sim))
 }
 
@@ -208,7 +216,7 @@ Save <- function(sim) {
   # ! ----- EDIT BELOW ----- ! #
   # do stuff for this event
   sim <- saveFiles(sim)
-
+  
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
 }
@@ -219,7 +227,7 @@ plotFun <- function(sim) {
   # do stuff for this event
   sampleData <- data.frame("TheSample" = sample(1:10, replace = TRUE))
   Plots(sampleData, fn = ggplotFn)
-
+  
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
 }
@@ -227,31 +235,31 @@ plotFun <- function(sim) {
 ### template for your event1
 selectBirds <- function(sim) {
   # ! ----- EDIT BELOW ----- ! #
-  browser()
+  
   # Calculate the density threshold for the given probability of occurrence threshold ####
   ps <- 6.25 # pixel size in hectares conversion rate (only works with resolution = 250m)
   densityThreshold <- -base::log(1 - P(sim)$probOfOccurrenceThreshold) / ps
   print(paste("with a probability of occurrence threshold of ", P(sim)$probOfOccurrenceThreshold, " a density threshold of ", densityThreshold, " is required", sep = ""))
-
-
+  
+  
   sim$birdList <- lapply(X = sim$birdRasters, FUN = function(birdRaster) {
     tryCatch(
       {
         print(birdRaster)
-
+        
         hist(birdRaster)
-
+        
         ## Get raster density values ####
         nameBird <- names(birdRaster)
         densityValues <- terra::values(birdRaster)
         densityValues <- na.omit(densityValues)
-
+        
         ## Calculate if meets threshold ####
         noCells <- length(densityValues)
         meetsDensityThreshold <- sum(densityValues > densityThreshold)
         propArea <- meetsDensityThreshold / noCells
         meetsThreshold <- propArea >= P(sim)$areaThreshold
-
+        
         if (meetsThreshold == TRUE) {
           print(paste(nameBird, " meets threshold", sep = ""))
           return(nameBird)
@@ -265,18 +273,21 @@ selectBirds <- function(sim) {
       }
     )
   })
-
-
+  
+  
   # Get names of all birds that met the threshold ####
   sim$birdList <- unlist(sim$birdList, use.names = FALSE)
   sim$birdList <- na.omit(sim$birdList)
   # sim$birdList <- unlist(lapply(sim$birdList, substr, 8, 11)) #works for strings of the form "mosaic-XXXX-run3.tif"
   sim$birdList <- unlist(lapply(sim$birdList, substr, 1, 4)) # works for strings of the form "XXXX-meanboot_60.tif"
   sim$birdList <- setdiff(sim$birdList, P(sim)$excludeList)
-
+  
   print("birds that meet Threshold and were not in exclude list:")
   print(sim$birdList)
-
+  
+  #save
+  write.csv(sim$birdList, file.path(P(sim)$saveLocation, P(sim)$nameBirdList))
+  
   # Get names of all bird rasters checked ####
   sim$allBirds <- lapply(X = sim$birdRasters, FUN = function(birdRaster) {
     nameRas <- names(birdRaster)
@@ -284,20 +295,22 @@ selectBirds <- function(sim) {
     nameRas <- substr(nameRas, 1, 4) # works for strings of the form "XXXX-meanboot_60.tif"
     return(nameRas)
   })
-
+  
   sim$allBirds <- unlist(sim$allBirds, use.names = FALSE)
   # sim$allBirdRasters <- unlist(sim$birdRasters, use.names = FALSE)
-
+  
   print("all bird species examined")
   print(sim$allBirds)
-
+  
   # Get names all birds that did not meet threshold ####
-  sim$abscentBirds <- setdiff(sim$allBirds, sim$birdList)
-
+  sim$rejectBirds <- setdiff(sim$allBirds, sim$birdList)
+  
   print("birds that did not meet threshold, or were in the excludeList:")
-  print(sim$abscentBirds)
-
-
+  print(sim$rejectBirds)
+  
+  
+  
+  
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
 }
@@ -308,7 +321,7 @@ Event2 <- function(sim) {
   # THE NEXT TWO LINES ARE FOR DUMMY UNIT TESTS; CHANGE OR DELETE THEM.
   # sim$event2Test1 <- " this is test for event 2. " # for dummy unit test
   # sim$event2Test2 <- 777  # for dummy unit test
-
+  
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
 }
@@ -327,46 +340,46 @@ Event2 <- function(sim) {
   # if (!suppliedElsewhere('defaultColor', sim)) {
   #   sim$map <- Cache(prepInputs, extractURL('map')) # download, extract, load file from url in sourceURL
   # }
-
+  
   # cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
-
+  
   # ! ----- EDIT BELOW ----- ! #
-
+  
   # Get rasterToMatch ####
   if (!suppliedElsewhere("rasterToMatch", sim)) {
     print("get rasterToMatch from local drive")
     sim$rasterToMatch <- terra::rast(file.path(P(sim)$rasterToMatchLocation, P(sim)$rasterToMatchName))
     names(sim$rasterToMatch) <- "rasterToMatch"
   }
-
+  
   # Get studyArea shapefile ####
   if (!suppliedElsewhere("studyArea", sim)) {
     print("get studyArea shapefile from local drive")
     studyArea <- terra::vect(file.path(P(sim)$studyAreaLocation, P(sim)$.studyAreaName))
-
+    
     # postProcess studyArea
     sim$studyArea <- reproducible::Cache(reproducible::postProcessTo,
-      from = studyArea,
-      to = sim$rasterToMatch,
-      overwrite = FALSE,
-      verbose = TRUE
+                                         from = studyArea,
+                                         to = sim$rasterToMatch,
+                                         overwrite = FALSE,
+                                         verbose = TRUE
     )
   }
-
+  
   # crop and mask rasterToMatch to studyArea
   sim$rasterToMatch <- reproducible::Cache(terra::crop, sim$rasterToMatch, sim$studyArea)
   sim$rasterToMatch <- reproducible::Cache(terra::mask, sim$rasterToMatch, sim$studyArea)
-
-
+  
+  
   # Get bird density rasters ####
-
+  
   ## list all bird raster files with a given naming pattern
   # sim$allBirdRasters <- sort(list.files(P(sim)$locationSpRas, pattern = ".tif"))
   sim$allBirdRasters <- sort(list.files(P(sim)$locationSpRas, pattern = "-meanBoot"))
   print(sim$allBirdRasters)
-
+  
   ## input rasters
   sim$birdRasters <-
     lapply(
@@ -376,11 +389,11 @@ Event2 <- function(sim) {
         return(raster)
       }
     )
-
+  
   ## postprocess raster - cropping, masking to the study area and reprojecting to the rasterToMatch
   sim$birdRasters <- lapply(X = sim$birdRasters, FUN = function(rasterLayer) {
     print(rasterLayer)
-
+    
     proRaster <- reproducible::postProcessTo(
       from = rasterLayer,
       to = sim$rasterToMatch,
@@ -389,14 +402,14 @@ Event2 <- function(sim) {
       overwrite = FALSE,
       verbose = TRUE
     )
-
+    
     return(proRaster)
   })
-
-
+  
+  
   print(sim$birdRasters)
-
-
+  
+  
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
 }
