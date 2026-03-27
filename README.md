@@ -1,9 +1,3 @@
-# birdRange
-
-The birdRange, BRC and WBI_vegReclass modules were used to produce the input data for the usage example in the piecewise smoothing manuscript.
-
-• birdRange: determines which species BAM model rasters pass the selection criteria.
-
-• BRC: produces mean BAM model rasters from all available bootstrap replicate rasters for the study area.
-
-• WBI_vegReclass: produces our chosen landscapeRasters.
+birdRange is a SpaDES module that creates a list of species from a list of candidate species according to whether 
+1) the Boreal Avian Modelling project (BAM) model raster of bird density for that species pass the selection criteria
+2) that species is on a list of species to be excluded. 

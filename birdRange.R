@@ -227,12 +227,9 @@ plotFun <- function(sim) {
 ### template for your event1
 selectBirds <- function(sim) {
   # ! ----- EDIT BELOW ----- ! #
-  # THE NEXT TWO LINES ARE FOR DUMMY UNIT TESTS; CHANGE OR DELETE THEM.
-  # sim$event1Test1 <- " this is test for event 1. " # for dummy unit test
-  # sim$event1Test2 <- 999 # for dummy unit test
-
-  # Calculate the density threshold for the given probability of occurrence threshold
-  ps <- 6.25 # pixel size in hectares conversion rate
+  browser()
+  # Calculate the density threshold for the given probability of occurrence threshold ####
+  ps <- 6.25 # pixel size in hectares conversion rate (only works with resolution = 250m)
   densityThreshold <- -base::log(1 - P(sim)$probOfOccurrenceThreshold) / ps
   print(paste("with a probability of occurrence threshold of ", P(sim)$probOfOccurrenceThreshold, " a density threshold of ", densityThreshold, " is required", sep = ""))
 
@@ -241,15 +238,15 @@ selectBirds <- function(sim) {
     tryCatch(
       {
         print(birdRaster)
-        ## take the values from the rasters and input
-        ## them to a data table called cellValues
-        # clearPlot()
-        # Plot(birdRaster, na.color = "grey")
-        # hist(birdRaster)
 
+        hist(birdRaster)
+
+        ## Get raster density values ####
         nameBird <- names(birdRaster)
         densityValues <- terra::values(birdRaster)
         densityValues <- na.omit(densityValues)
+
+        ## Calculate if meets threshold ####
         noCells <- length(densityValues)
         meetsDensityThreshold <- sum(densityValues > densityThreshold)
         propArea <- meetsDensityThreshold / noCells
@@ -269,33 +266,37 @@ selectBirds <- function(sim) {
     )
   })
 
+
+  # Get names of all birds that met the threshold ####
   sim$birdList <- unlist(sim$birdList, use.names = FALSE)
   sim$birdList <- na.omit(sim$birdList)
   # sim$birdList <- unlist(lapply(sim$birdList, substr, 8, 11)) #works for strings of the form "mosaic-XXXX-run3.tif"
   sim$birdList <- unlist(lapply(sim$birdList, substr, 1, 4)) # works for strings of the form "XXXX-meanboot_60.tif"
   sim$birdList <- setdiff(sim$birdList, P(sim)$excludeList)
 
-  # get names of all birds looked at
+  print("birds that meet Threshold and were not in exclude list:")
+  print(sim$birdList)
+
+  # Get names of all bird rasters checked ####
   sim$allBirds <- lapply(X = sim$birdRasters, FUN = function(birdRaster) {
     nameRas <- names(birdRaster)
     # nameRas <- substr(nameRas, 8, 11) #works for strings of the form "mosaic-XXXX-run3.tif"
     nameRas <- substr(nameRas, 1, 4) # works for strings of the form "XXXX-meanboot_60.tif"
     return(nameRas)
   })
+
   sim$allBirds <- unlist(sim$allBirds, use.names = FALSE)
   # sim$allBirdRasters <- unlist(sim$birdRasters, use.names = FALSE)
-
-  # find birds that did not meet threshold
-  sim$abscentBirds <- setdiff(sim$allBirds, sim$birdList)
 
   print("all bird species examined")
   print(sim$allBirds)
 
-  print("birds that meet Threshold:")
-  print(sim$birdList)
+  # Get names all birds that did not meet threshold ####
+  sim$abscentBirds <- setdiff(sim$allBirds, sim$birdList)
 
   print("birds that did not meet threshold, or were in the excludeList:")
   print(sim$abscentBirds)
+
 
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
@@ -333,109 +334,40 @@ Event2 <- function(sim) {
 
   # ! ----- EDIT BELOW ----- ! #
 
-  # get rasterToMatch
+  # Get rasterToMatch ####
   if (!suppliedElsewhere("rasterToMatch", sim)) {
-    print("get rasterTomatch from local drive")
+    print("get rasterToMatch from local drive")
     sim$rasterToMatch <- terra::rast(file.path(P(sim)$rasterToMatchLocation, P(sim)$rasterToMatchName))
+    names(sim$rasterToMatch) <- "rasterToMatch"
   }
 
-  # get studyArea shapefile
+  # Get studyArea shapefile ####
   if (!suppliedElsewhere("studyArea", sim)) {
     print("get studyArea shapefile from local drive")
     studyArea <- terra::vect(file.path(P(sim)$studyAreaLocation, P(sim)$.studyAreaName))
 
     # postProcess studyArea
-    # Cache(projectRaster, raster, crs = crs(newRaster))
-    message("cache studyArea")
-    sim$studyArea <- reproducible::Cache(reproducible::postProcess, studyArea,
-      # destinationPath = P(sim)$studyAreaLocation,
-      # filename2 = "studyArea",
-      useTerra = TRUE,
-      fun = "terra::vect", # use the function vect
-      targetCRS = crs(sim$rasterToMatch), # make crs same as rasterToMatch
-      # overwrite = FALSE,
+    sim$studyArea <- reproducible::Cache(reproducible::postProcessTo,
+      from = studyArea,
+      to = sim$rasterToMatch,
+      overwrite = FALSE,
       verbose = TRUE
     )
   }
 
-  # crop and mask rasterToMatch
+  # crop and mask rasterToMatch to studyArea
   sim$rasterToMatch <- reproducible::Cache(terra::crop, sim$rasterToMatch, sim$studyArea)
   sim$rasterToMatch <- reproducible::Cache(terra::mask, sim$rasterToMatch, sim$studyArea)
-  names(sim$rasterToMatch) <- "rasterToMatch"
 
 
-  # if (P(sim)$fromDrive == TRUE) {
-  #   #get bird density rasters
-  #   patternNameBirdRaster <- "mosaic-" #choose naming pattern to look for
-  #
-  #   ## drive_ls function is used to list all the files it finds using the folder url with the given pattern
-  #   sim$allBirdRasters <-
-  #     googledrive::drive_ls(path = as_id(P(sim)$locationSpRas),
-  #                           pattern = patternNameBirdRaster)
-  #
-  #   print(sim$allBirdRasters$name)
-  #
-  #
-  #
-  #   # grepl function searches for all items in the allBirdRasters that are on birdList & stores their names in rastersforBirdList
-  #   # sim$rastersForBirdList <-
-  #   #   allBirdRasters$name[grepl(pattern = paste(P(sim)$birdList, collapse = "|"),
-  #   #                              x = allBirdRasters$name)]
-  #
-  #   ## for each item in turn from rastersForBirdlist the following function is applied:
-  #   sim$birdList <-
-  #     lapply(
-  #       X = sim$rastersForBirdList,
-  #       FUN = function(rasterFile) {
-  #
-  #         nameBird <- substr(rasterFile, 8, 11) #works for strings of the form "mosaic-XXXX-run3.tif"
-  #         nameBird <- paste(nameBird, ".tif", sep = "")
-  #
-  #         ## if the item in rastersForBirdList is not already present at rastersPath, googledrive package downloads it
-  #         if (!file.exists(file.path(downloadFolderBird, rasterFile))) {
-  #           googledrive::drive_download(
-  #             file = as_id(allBirdRasters[allBirdRasters$name %in% rasterFile,]$id),
-  #             overwrite = TRUE,
-  #             path = file.path(downloadFolderBird, nameBird)
-  #
-  #           )
-  #         }
-  #
-  #         ## otherwise, if it is already present and downloaded, just get the name of the item
-  #         return(terra::rast(file.path(downloadFolderBird, nameBird)))
-  #       }
-  #     )
-  #
-  #   # #get the species codes as names for the downloadedRasters object, rather than using the whole filepath
-  #   # X <- lapply(sim$rastersForBirdList, substr, 8, 11) #works for strings of the form "mosaic-XXXX-run3.tif"
-  #   # names(sim$birdRasters) <- X
-  #
-  #   sim$birdRasters <- lapply(X = sim$birdRasters, FUN = function(RasterLayer) {
-  #     ## the function postProcesses the layer, cropping and masking it to a given study area and rasterToMatch, and saving it to a given destination path
-  #
-  #     proRaster <- reproducible::postProcess(RasterLayer,
-  #                                            #studyArea = sim$studyArea,
-  #                                            rasterToMatch = sim$rasterToMatch,
-  #                                            useTerra = TRUE,
-  #                                            fun = "terra::rast",
-  #                                            destinationPath = downloadFolderBird,
-  #                                            filename2 = paste(downloadFolderBird, "/", names(RasterLayer), ".tif", sep = ""),
-  #                                            overwrite = TRUE,
-  #                                            verbose = TRUE)
-  #     # clearPlot()
-  #     # Plot(proRaster, na.color= "grey")
-  #     return(proRaster)
-  #   })
-  #
-  #
-  # }
-  # } else {
+  # Get bird density rasters ####
 
-  # get bird density rasters
-  # sim$allBirdRasters <- sort(list.files(P(sim)$locationSpRas, pattern = ".tif")) #list all bird raster files with a given naming pattern
-  sim$allBirdRasters <- sort(list.files(P(sim)$locationSpRas, pattern = "-meanBoot")) # list all bird raster files with a given naming pattern
+  ## list all bird raster files with a given naming pattern
+  # sim$allBirdRasters <- sort(list.files(P(sim)$locationSpRas, pattern = ".tif"))
+  sim$allBirdRasters <- sort(list.files(P(sim)$locationSpRas, pattern = "-meanBoot"))
   print(sim$allBirdRasters)
-  ## for each item in turn from rastersForBirdlist the following function is applied:
+
+  ## input rasters
   sim$birdRasters <-
     lapply(
       X = sim$allBirdRasters,
@@ -445,29 +377,22 @@ Event2 <- function(sim) {
       }
     )
 
-  sim$birdRasters <- lapply(X = sim$birdRasters, FUN = function(RasterLayer) {
-    ## the function postProcesses the layer, cropping and masking it to a given study area and rasterToMatch, and saving it to a given destination path
-    print(RasterLayer)
+  ## postprocess raster - cropping, masking to the study area and reprojecting to the rasterToMatch
+  sim$birdRasters <- lapply(X = sim$birdRasters, FUN = function(rasterLayer) {
+    print(rasterLayer)
 
-    proRaster <- reproducible::postProcess(RasterLayer,
-      # studyArea = sim$studyArea,
-      rasterToMatch = sim$rasterToMatch,
-      useTerra = TRUE,
-      fun = "terra::rast",
-      # destinationPath = downloadFolderSp,
-      # filename2 = paste(downloadFolderSp, "/", names(RasterLayer), ".tif", sep = ""),
-      # overwrite = TRUE,
+    proRaster <- reproducible::postProcessTo(
+      from = rasterLayer,
+      to = sim$rasterToMatch,
+      cropTo = sim$studyArea,
+      maskTo = sim$studyArea,
+      overwrite = FALSE,
       verbose = TRUE
     )
 
-
-    # clearPlot()
-    # Plot(proRaster, na.color= "grey")
     return(proRaster)
   })
 
-
-  # }
 
   print(sim$birdRasters)
 

@@ -32,9 +32,11 @@ if (!require(dplyr)) {
 
 dir.create("figures", showWarnings = FALSE)
 
-download.file(url = "https://img.shields.io/badge/Made%20with-Markdown-1f425f.png",
-              destfile = "figures/markdownBadge.png",
-              mode = 'wb')
+download.file(
+  url = "https://img.shields.io/badge/Made%20with-Markdown-1f425f.png",
+  destfile = "figures/markdownBadge.png",
+  mode = "wb"
+)
 ```
 
 [![made-with-Markdown](figures/markdownBadge.png)](https://commonmark.org)
@@ -43,7 +45,7 @@ download.file(url = "https://img.shields.io/badge/Made%20with-Markdown-1f425f.pn
 
 #### Authors:
 
-`r paste(as.character(SpaDES.core::moduleMetadata(module = "birdRange", path = '..')$authors), sep = ', ')`
+`r paste(as.character(SpaDES.core::moduleMetadata(module = "birdRange", path = '../../modules')$authors), sep = ', ')`
 <!-- ideally separate authors with new lines, '\n' not working -->
 
 ## Module Overview
@@ -58,13 +60,14 @@ This is a template for module documentation, and should be changed to reflect yo
 ### Module inputs and parameters
 
 Describe input data required by the module and how to obtain it (e.g., directly from online sources or supplied by other modules)
-If `sourceURL` is specified, `downloadData("birdRange", "C:/Users/RALAS6/Documents/Repositories/SpaDES/modules/birdRange")` may be sufficient.
+If `sourceURL` is specified, `downloadData("birdRange", "../../modules")` may be sufficient.
 Table \@ref(tab:moduleInputs-birdRange) shows the full list of module inputs.
 
 ```{r moduleInputs-birdRange, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
-df_inputs <- SpaDES.core::moduleInputs("birdRange", "C:/Users/RALAS6/Documents/Repositories/SpaDES/modules")
+df_inputs <- SpaDES.core::moduleInputs("birdRange", "../../modules")
 knitr::kable(df_inputs,
-             caption = "List of (ref:birdRange) input objects and their description.") %>%
+  caption = "List of (ref:birdRange) input objects and their description."
+) %>%
   kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
 ```
 
@@ -72,7 +75,7 @@ Provide a summary of user-visible parameters (Table \@ref(tab:moduleParams-birdR
 
 
 ```{r moduleParams-birdRange, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
-df_params <- SpaDES.core::moduleParams("birdRange", "C:/Users/RALAS6/Documents/Repositories/SpaDES/modules")
+df_params <- SpaDES.core::moduleParams("birdRange", "../../modules")
 knitr::kable(df_params, caption = "List of (ref:birdRange) parameters and their description.") %>%
   kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
 ```
@@ -94,7 +97,7 @@ Write what is saved.
 Description of the module outputs (Table \@ref(tab:moduleOutputs-birdRange)).
 
 ```{r moduleOutputs-birdRange, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE}
-df_outputs <- SpaDES.core::moduleOutputs("birdRange", "C:/Users/RALAS6/Documents/Repositories/SpaDES/modules")
+df_outputs <- SpaDES.core::moduleOutputs("birdRange", "../../modules")
 knitr::kable(df_outputs, caption = "List of (ref:birdRange) outputs and their description.") %>%
   kableExtra::kable_styling(latex_options = "scale_down", full_width = TRUE)
 ```
@@ -110,76 +113,71 @@ Describe any anticipated linkages to other modules, such as modules that supply 
 ### EXAMPLE CODE TO RUN MODULE
 
 ```{r moduleRun}
-
-library("conflicted")
 library("SpaDES.core")
-#library("googledrive")
 
 ## make a list of directory paths
-inputsDir <- checkPath("../../inputs", create = TRUE)
-outputsDir <- checkPath("../../outputs", create = TRUE)
-downloadFolderArea <- checkPath(file.path(inputsDir, "studyArea", "studyArea_AB_BCR6"), create = TRUE)
-downloadFolderBird <- checkPath(file.path(inputsDir, "birdRasterFiles"), create = TRUE)
-setPaths(modulePath = file.path("../../modules"),
-         cachePath = file.path("../../cache"),
-         scratchPath = file.path("../../scratch"),
-         inputPath = inputsDir,
-         outputPath = outputsDir)
-
+setPaths(
+  modulePath = file.path("../../modules"),
+  cachePath = file.path("../../cache"),
+  scratchPath = file.path("../../scratch"),
+  inputPath = file.path("../../inputs"),
+  outputPath = file.path("../../outputs/birdRange")
+)
 simPaths <- getPaths()
 
-# #parameters from Drive
-# folderUrlBirdRaster <- 
-# rasterToMatchLocation <- as_id("")
-# rasterToMatchName <- "LCC2005_V1_4a.tif"
-# nameBCR <- "60"
-# 
-# ### STUDY AREA AB
-# studyAreaLocation <- file.path("")
-# #specify file name
-# .studyAreaName <- "studyAreaAB.shp" #specify file name
-#  #specify folder url
-# archiveStudyArea <- "studyAreaAB.zip" #give archive name
+# specify inputs and input paths (to be provided as parameters), and download example input files ####
 
-#parameters from local
-rasterToMatchLocation <- inputsDir
-rasterToMatchName <- "LCC2005_V1_4a.tif"
-studyAreaLocation <- downloadFolderArea
-nameBCR <- "60"
+# rasterToMatch
+locationLandscapeRasters <- checkPath(file.path(Paths$inputPath, "landscapeRasters"), create = TRUE)
+zen4R::download_zenodo(doi = "10.5281/zenodo.17410019", path = locationLandscapeRasters)
+unzip(file.path(locationLandscapeRasters, "landscapeRasters.zip"), exdir = locationLandscapeRasters)
+locationRasterToMatch <- locationLandscapeRasters
+rasterToMatchName <- "landCoverRas_AB_BCR6_2010"
+
+# studyArea
+locationStudyArea <- checkPath(file.path(Paths$inputPath, "studyArea"), create = TRUE)
 .studyAreaName <- "studyArea_AB_BCR6.shp"
-folderUrlBirdRaster <- downloadFolderBird
+zen4R::download_zenodo(doi = "10.5281/zenodo.17409820", path = locationStudyArea)
+unzip(file.path(locationStudyArea, paste(tools::file_path_sans_ext(.studyAreaName), ".zip", sep = "")), exdir = locationStudyArea)
+locationStudyArea <- file.path(Paths$inputPath, "studyArea", tools::file_path_sans_ext(.studyAreaName))
+
+# specify BCR (to be provided as parameter)
+nameBCR <- "60"
+
+# species rasters
+locationSpRas <- checkPath(file.path(Paths$inputPath), create = TRUE)
+zen4R::download_zenodo(doi = "10.5281/zenodo.17516504", path = locationSpRas)
+unzip(file.path(locationSpRas, "meanSpRasters.zip"), exdir = locationSpRas)
+locationSpRas <- file.path(Paths$inputPath, "meanSpRasters")
+
+# specify any species to exclude- here, we exclude non-native species
 excludeList <- c("EUST", "HOSP", "ROPI")
 
-
-
-simModules <- list("birdRange")
-
 ## Set simulation and module parameters
+simModules <- list("birdRange")
 simTimes <- list(start = 1, end = 1, timeunit = "year")
 simParams <- list(
-    birdRange = list( 
-               .doSelectInitialTime = 1,
-               fromDrive = FALSE,
-               folderUrlBirdRaster = folderUrlBirdRaster,
-               .studyAreaName = .studyAreaName,
-               #archiveStudyArea = archiveStudyArea,
-               rasterToMatchLocation = rasterToMatchLocation,
-               rasterToMatchName = rasterToMatchName,
-               studyAreaLocation = studyAreaLocation,
-               nameBCR = nameBCR,
-               excludeList = excludeList,
-               areaThreshold = 0.05,
-               probOfOccurrenceThreshold = 0.5
-               )
+  birdRange = list(
+    .doSelectInitialTime = 1,
+    fromDrive = FALSE,
+    locationSpRas = locationSpRas,
+    .studyAreaName = .studyAreaName,
+    rasterToMatchLocation = locationRasterToMatch,
+    rasterToMatchName = rasterToMatchName,
+    studyAreaLocation = locationStudyArea,
+    nameBCR = nameBCR,
+    excludeList = excludeList,
+    areaThreshold = 0.01,
+    probOfOccurrenceThreshold = 0.25
+  )
 )
 
 
-
 ## Simulation setup
-mySim <- simInit(times = simTimes, params = simParams, 
-                 modules = simModules, paths = simPaths)
+mySim <- simInit(
+  times = simTimes, params = simParams,
+  modules = simModules, paths = simPaths
+)
 
 test <- spades(mySim)
-
 ```
-
