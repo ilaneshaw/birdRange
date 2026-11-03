@@ -66,36 +66,32 @@ defineModule(sim, list(
       "the file location of the studyArea"
     ),
     defineParameter(
-      "nameBCR", "character", NA, NA, NA,
-      "the BAM regional model BCR region that the studyArea is located in"
+      "locationSpRas", "character", NA, NA, NA,
+      "the location of the sp density rasters"
     ),
     defineParameter(
-      "locationSpRas", "character", NA, NA, NA,
-      "the location of the bird density rasters"
+      "namePattern", "character", NA, NA, NA,
+      "a naming pattern that can be used to identify wanted species rasters at locationSpRas"
+    ),
+    defineParameter(
+      "spNameSubstr", "numeric", NA, NA, NA,
+      "Two numbers giving the location of the first and last characters of the species name within the species raster file name"
     ),
     defineParameter(
       "fromDrive", "logical", TRUE, NA, NA,
-      "Should the rasterToMatch, studyArea and bird Rasters be found on Google Drive or a similar online source? If false, they should already be on your local computer."
+      "Should the rasterToMatch, studyArea and sp Rasters be found on Google Drive or a similar online source? If false, they should already be on your local computer."
     ),
     defineParameter(
       "excludeList", "character", NA, NA, NA,
       "a list of species codes, for species that should not be included, regardless of their densities"
     ),
     defineParameter(
-      "areaThreshold", "numeric", 0.05, 0, 1,
+      "areaThreshold", "numeric", 0.25, 0, 1,
       "The minimum area over which the probability of occurrence threshold must be reached for species to be considered present"
     ),
     defineParameter(
-      "probOfOccurrenceThreshold", "numeric", 0.5, 0, 1,
+      "probOfOccurrenceThreshold", "numeric", 0.05, 0, 1,
       "The minimum probability of occurence that must be reached for species to be considered present"
-    ),
-    defineParameter(
-      "saveLocation", "character", "Paths$outputPath", NA, NA,
-      "where to save a csv copy of the birdList"
-    ),
-    defineParameter(
-      "nameBirdList", "character", "birdList", NA, NA,
-      "what to name saved csv birdList file"
     ),
     ## .seed is optional: `list('init' = 123)` will `set.seed(123)` for the `init` event only.
     defineParameter(
@@ -113,7 +109,8 @@ defineModule(sim, list(
   ),
   outputObjects = bindrows(
     # createsOutput("objectName", "objectClass", "output object description", ...),
-    createsOutput(objectName = NA, objectClass = NA, desc = NA)
+    createsOutput(objectName = "spList", objectClass = "character", 
+                  desc = "A character vector of the species names/codes that meet the probOfOccurrenceThreshold over the areaThreshold and that are not on the excludeList")
   )
 ))
 
@@ -128,9 +125,10 @@ doEvent.birdRange <- function(sim, eventTime, eventType) {
            
            # do stuff for this event
            sim <- Init(sim)
+           #sim <- selectSps(sim)
            
            # schedule future event(s)
-           sim <- scheduleEvent(sim, P(sim)$.doSelectInitialTime, "birdRange", "selectBirds")
+           sim <- scheduleEvent(sim, P(sim)$.doSelectInitialTime, "birdRange", "selectSps")
            sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "birdRange", "plot")
            sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "birdRange", "save")
          },
@@ -160,17 +158,17 @@ doEvent.birdRange <- function(sim, eventTime, eventType) {
            
            # ! ----- STOP EDITING ----- ! #
          },
-         selectBirds = {
+         selectSps = {
            # ! ----- EDIT BELOW ----- ! #
            # do stuff for this event
            
            # e.g., call your custom functions/methods here
            # you can define your own methods below this `doEvent` function
-           sim <- selectBirds(sim)
+           sim <- selectSps(sim)
            # schedule future event(s)
            sim <- scheduleEvent(sim,
                                 eventTime = time(sim) + P(sim)$selectInterval,
-                                moduleName = "birdRange", eventType = "selectBirds"
+                                moduleName = "birdRange", eventType = "selectSps"
            )
            # e.g.,
            # sim <- scheduleEvent(sim, time(sim) + increment, "birdRange", "templateEvent")
@@ -233,82 +231,79 @@ plotFun <- function(sim) {
 }
 
 ### template for your event1
-selectBirds <- function(sim) {
+selectSps <- function(sim) {
   # ! ----- EDIT BELOW ----- ! #
+
+  # densityThreshold ----
+  # Calculate the density threshold for the given probability of occurrence threshold 
+  crsSpRas <- terra::crs(sim$spRasters[[1]], proj=TRUE)
+  if(grepl("units=m", crsSpRas)){ #check sp raster units are in meters
+    ps <- prod(terra::res(sim$spRasters[[1]])) / 10000 
+  }else{
+    stopifnot(grepl("units=m", crsSpRas))
+  }
+  sim$densityThreshold <- -base::log(1 - P(sim)$probOfOccurrenceThreshold) / ps
+  print(paste("with a probability of occurrence threshold of ", P(sim)$probOfOccurrenceThreshold, " a density threshold of ", sim$densityThreshold, " is required", sep = ""))
   
-  # Calculate the density threshold for the given probability of occurrence threshold ####
-  ps <- 6.25 # pixel size in hectares conversion rate (only works with resolution = 250m)
-  densityThreshold <- -base::log(1 - P(sim)$probOfOccurrenceThreshold) / ps
-  print(paste("with a probability of occurrence threshold of ", P(sim)$probOfOccurrenceThreshold, " a density threshold of ", densityThreshold, " is required", sep = ""))
+  # inputSpRas ----
+  sim$inputSpRas <- lapply(X = sim$spRasters, FUN = function(spRaster) {
+    nameRas <- names(spRaster)
+    return(nameRas)
+  })
+  sim$inputSpRas <- unlist(sim$inputSpRas, use.names = FALSE)
+  print("inputSpRas:") 
+  print(sim$inputSpRas)
   
   
-  sim$birdList <- lapply(X = sim$birdRasters, FUN = function(birdRaster) {
+ ## spList ----
+  sim$spList <- lapply(X = sim$spList, FUN = function(sp) {
     tryCatch(
       {
-        print(birdRaster)
-        
-        hist(birdRaster)
-        
-        ## Get raster density values ####
-        nameBird <- names(birdRaster)
-        densityValues <- terra::values(birdRaster)
+    
+        spRaster <- sim$spRasters[[sp]]
+        hist(spRaster)
+
+        ## Get raster density values 
+        densityValues <- terra::values(spRaster)
         densityValues <- na.omit(densityValues)
-        
-        ## Calculate if meets threshold ####
+
+        ## Calculate if meets threshold 
         noCells <- length(densityValues)
-        meetsDensityThreshold <- sum(densityValues > densityThreshold)
+        meetsDensityThreshold <- sum(densityValues > sim$densityThreshold)
         propArea <- meetsDensityThreshold / noCells
         meetsThreshold <- propArea >= P(sim)$areaThreshold
-        
+
         if (meetsThreshold == TRUE) {
-          print(paste(nameBird, " meets threshold", sep = ""))
-          return(nameBird)
+          #print(paste(nameSp, " meets threshold", sep = ""))
+          return(sp)
         } else {
-          print(paste(nameBird, " doesn't meet threshold", sep = ""))
+          #print(paste(nameSp, " doesn't meet threshold", sep = ""))
           return(NA)
         }
+        
       },
       error = function(e) {
         return(NA)
       }
     )
   })
+
+  sim$spList <- unlist(sim$spList, use.names = FALSE)
+  sim$spList <- na.omit(sim$spList)
+  sim$spList <- setdiff(sim$spList, P(sim)$excludeList)
+
+  print("spList: sps that meet Thresholds and were not on exclude list")
+  print(sim$spList)
+
   
+  # rejectSp ----
+  sim$rejectSps <- setdiff(sim$inputSpRas, sim$spList)
   
-  # Get names of all birds that met the threshold ####
-  sim$birdList <- unlist(sim$birdList, use.names = FALSE)
-  sim$birdList <- na.omit(sim$birdList)
-  # sim$birdList <- unlist(lapply(sim$birdList, substr, 8, 11)) #works for strings of the form "mosaic-XXXX-run3.tif"
-  sim$birdList <- unlist(lapply(sim$birdList, substr, 1, 4)) # works for strings of the form "XXXX-meanboot_60.tif"
-  sim$birdList <- setdiff(sim$birdList, P(sim)$excludeList)
-  
-  print("birds that meet Threshold and were not in exclude list:")
-  print(sim$birdList)
-  
-  #save
-  write.csv(sim$birdList, file.path(P(sim)$saveLocation, P(sim)$nameBirdList))
-  
-  # Get names of all bird rasters checked ####
-  sim$allBirds <- lapply(X = sim$birdRasters, FUN = function(birdRaster) {
-    nameRas <- names(birdRaster)
-    # nameRas <- substr(nameRas, 8, 11) #works for strings of the form "mosaic-XXXX-run3.tif"
-    nameRas <- substr(nameRas, 1, 4) # works for strings of the form "XXXX-meanboot_60.tif"
-    return(nameRas)
-  })
-  
-  sim$allBirds <- unlist(sim$allBirds, use.names = FALSE)
-  # sim$allBirdRasters <- unlist(sim$birdRasters, use.names = FALSE)
-  
-  print("all bird species examined")
-  print(sim$allBirds)
-  
-  # Get names all birds that did not meet threshold ####
-  sim$rejectBirds <- setdiff(sim$allBirds, sim$birdList)
-  
-  print("birds that did not meet threshold, or were in the excludeList:")
-  print(sim$rejectBirds)
-  
-  
+  print("rejectSp: sps that did not meet threshold, or were on the excludeList")
+  print(sim$rejectSps)
+
+  # amend spRasters ----
+  # remove all rasters not on spList
   
   
   # ! ----- STOP EDITING ----- ! #
@@ -346,15 +341,16 @@ Event2 <- function(sim) {
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
   
   # ! ----- EDIT BELOW ----- ! #
-  
-  # Get rasterToMatch ####
+
+  # rasterToMatch ----
   if (!suppliedElsewhere("rasterToMatch", sim)) {
     print("get rasterToMatch from local drive")
     sim$rasterToMatch <- terra::rast(file.path(P(sim)$rasterToMatchLocation, P(sim)$rasterToMatchName))
+    terra::values(sim$rasterToMatch) <- 1
     names(sim$rasterToMatch) <- "rasterToMatch"
   }
   
-  # Get studyArea shapefile ####
+  # studyArea ----
   if (!suppliedElsewhere("studyArea", sim)) {
     print("get studyArea shapefile from local drive")
     studyArea <- terra::vect(file.path(P(sim)$studyAreaLocation, P(sim)$.studyAreaName))
@@ -367,50 +363,78 @@ Event2 <- function(sim) {
                                          verbose = TRUE
     )
   }
-  
+ 
   # crop and mask rasterToMatch to studyArea
-  sim$rasterToMatch <- reproducible::Cache(terra::crop, sim$rasterToMatch, sim$studyArea)
-  sim$rasterToMatch <- reproducible::Cache(terra::mask, sim$rasterToMatch, sim$studyArea)
+  #sim$rasterToMatch <- reproducible::Cache(terra::crop, sim$rasterToMatch, sim$studyArea)
+  #sim$rasterToMatch <- reproducible::Cache(terra::mask, sim$rasterToMatch, sim$studyArea)
   
+  # spRasters ----
+   if (!suppliedElsewhere("spRasters", sim)) { 
   
-  # Get bird density rasters ####
-  
-  ## list all bird raster files with a given naming pattern
-  # sim$allBirdRasters <- sort(list.files(P(sim)$locationSpRas, pattern = ".tif"))
-  sim$allBirdRasters <- sort(list.files(P(sim)$locationSpRas, pattern = "-meanBoot"))
-  print(sim$allBirdRasters)
-  
-  ## input rasters
-  sim$birdRasters <-
-    lapply(
-      X = sim$allBirdRasters,
-      FUN = function(birdRaster) {
-        raster <- terra::rast(file.path(P(sim)$locationSpRas, birdRaster))
-        return(raster)
-      }
-    )
-  
-  ## postprocess raster - cropping, masking to the study area and reprojecting to the rasterToMatch
-  sim$birdRasters <- lapply(X = sim$birdRasters, FUN = function(rasterLayer) {
-    print(rasterLayer)
+     #get names of all sp rasters
+     if(is.na(P(sim)$namePattern)){ 
+       ## list all sp raster files
+       sim$namesAllSpRas <- sort(list.files(P(sim)$locationSpRas)) 
+     } else {
+       ## list all sp raster files with a given naming pattern
+       sim$namesAllSpRas <- sort(list.files(P(sim)$locationSpRas, pattern = P(sim)$namePattern))
+     }
+     
+  #input spRasters   
+  sim$spRasters <- lapply(X = sim$namesAllSpRas, FUN = function(ras) {
     
-    proRaster <- reproducible::postProcessTo(
-      from = rasterLayer,
-      to = sim$rasterToMatch,
-      cropTo = sim$studyArea,
-      maskTo = sim$studyArea,
-      overwrite = FALSE,
-      verbose = TRUE
-    )
+    tryCatch({
     
-    return(proRaster)
-  })
+    spRas <- terra::rast(file.path(P(sim)$locationSpRas, ras))
+    
+    #name the raster sp
+    spName <- substr(ras, P(sim)$spNameSubst[1], P(sim)$spNameSubst[2]) 
+    names(spRas) <- spName
+    
+   # postprocess raster - cropping, masking to the study area and reprojecting to the rasterToMatch
+   spRas <- reproducible::postProcessTo(
+     from = spRas,
+     to = sim$rasterToMatch,
+     cropTo = sim$studyArea,
+     maskTo = sim$studyArea,
+     overwrite = FALSE,
+     verbose = TRUE
+   )
+   
+   return(spRas)
+   
+      }, error = function(e) {return(NA)})
   
+    })
   
-  print(sim$birdRasters)
+  # Remove any NAs in the spRasters List ####
+  naSp <- is.na(sim$spRasters)
+  sim$spRasters <- sim$spRasters[!naSp]
   
+  #Get vector of sp input from raster names
+  sim$inputSpRas <- unlist(lapply(X = sim$spRasters, FUN = function(spRas) {
+    sp <- names(spRas)
+    return(sp)
+  }), use.names = FALSE)
   
-  # ! ----- STOP EDITING ----- ! #
+  #name spRasters
+  names(sim$spRasters) <- sim$inputSpRas
+  print(".inputObjects: inputSpRas") 
+  print(sim$inputSpRas)
+  
+  #check for multiple rasters per sp
+  stopifnot(!any(duplicated(sim$inputSpRas))) 
+
+   }
+   
+    # spList ----
+   if (!suppliedElsewhere("spList", sim)) {
+          sim$spList <- sort(unique(sim$inputSpRas))
+   }
+  print(".inputObjects: spList")
+  print(sim$spList)
+  
+    # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
 }
 

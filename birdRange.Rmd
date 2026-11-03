@@ -115,46 +115,44 @@ Describe any anticipated linkages to other modules, such as modules that supply 
 ```{r moduleRun}
 library("SpaDES.core")
 
-## make a list of directory paths
+options(spades.useRequire = FALSE)
+
+# put outputs for each set of age classes/different study area in separate folder
+ageGrouping <- 10 #10, # 20, #40, ##used only for naming, not needed for module functionality
+maxAgeClass <- 17 #17, # 9, #5, ##used only for naming, not needed for module functionality
+province <- "QC" #"AB" #"QC" # "NT"  ## used only for naming, not needed for module functionality
+bcr <-  "8_12" #"6"#"8_12" #"7"  ## used only for naming, not needed for module functionality
+runName <- paste(maxAgeClass, "x", ageGrouping, "YrAgeClasses_", province, "_", bcr, sep = "")
+#runName <- "9x20yrAgeClasses"
+#runName <- "5x40yrAgeClasses"
+
+# set up directory paths
 setPaths(
-  modulePath = file.path("../../modules"),
-  cachePath = file.path("../../cache"),
-  scratchPath = file.path("../../scratch"),
-  inputPath = file.path("../../inputs"),
-  outputPath = file.path("../../outputs")
+  modulePath = file.path("./modules"),
+  cachePath = file.path("./cache"),
+  scratchPath = file.path("./scratch"),
+  inputPath = file.path("./inputs"),
+  outputPath = file.path("./outputs", runName)
 )
 simPaths <- getPaths()
 
 # specify inputs and input paths (to be provided as parameters), and download example input files ####
 
-# rasterToMatch
-locationLandscapeRasters <- checkPath(file.path(Paths$inputPath, "landscapeRasters"), create = TRUE)
-zen4R::download_zenodo(doi = "10.5281/zenodo.17410019", path = locationLandscapeRasters)
-unzip(file.path(locationLandscapeRasters, "landscapeRasters.zip"), exdir = locationLandscapeRasters)
-locationRasterToMatch <- locationLandscapeRasters
-rasterToMatchName <- "landCoverRas_AB_BCR6_2010"
-
 # studyArea
-locationStudyArea <- checkPath(file.path(Paths$inputPath, "studyArea"), create = TRUE)
-.studyAreaName <- "studyArea_AB_BCR6.shp"
-zen4R::download_zenodo(doi = "10.5281/zenodo.17409820", path = locationStudyArea)
-unzip(file.path(locationStudyArea, paste(tools::file_path_sans_ext(.studyAreaName), ".zip", sep = "")), exdir = locationStudyArea)
-locationStudyArea <- file.path(Paths$inputPath, "studyArea", tools::file_path_sans_ext(.studyAreaName))
+.studyAreaName <- paste("studyArea_", province, "_BCR", bcr, ".shp", sep = "")
+locationStudyArea <- checkPath(file.path(Paths$inputPath, "studyArea", tools::file_path_sans_ext(.studyAreaName)), create = TRUE)
+studyArea <- terra::vect(file.path(locationStudyArea, .studyAreaName))
 
-# specify BCR (to be provided as parameter)
-nameBCR <- "60"
+# specify rasterToMatch - this can be any raster that covers the whole study area at the desired resolution/projection.
+rasterToMatchName <- paste("landRas_", province, "_BCR", bcr, "_2020.shp", sep = "") # here I use the landCoverRas
+locationRasterToMatch <- checkPath(file.path(Paths$inputPath, "landscapeRasters"), create = TRUE) 
 
 # species rasters
-locationSpRas <- checkPath(file.path(Paths$inputPath), create = TRUE)
-zen4R::download_zenodo(doi = "10.5281/zenodo.17516504", path = locationSpRas)
-unzip(file.path(locationSpRas, "meanSpRasters.zip"), exdir = locationSpRas)
-locationSpRas <- file.path(Paths$inputPath, "meanSpRasters")
+locationSpRas <- file.path(Paths$inputPath, "spRasters", "meanSpRasters")
+#namePattern <- ".tif"
+spNameSubstr <- c(1,4) 
 
-#specify where to save birdList
-saveLocation <- checkPath(file.path(Paths$inputPath, "speciesList"), create = TRUE)
-nameBirdList <- "birdList_AB"
-  
-# specify any species to exclude- here, we exclude non-native species
+# specify any species to exclude. Here, we exclude non-native species
 excludeList <- c("EUST", "HOSP", "ROPI")
 
 ## Set simulation and module parameters
@@ -165,17 +163,16 @@ simParams <- list(
     .doSelectInitialTime = 1,
     fromDrive = FALSE,
     locationSpRas = locationSpRas,
+    #namePattern = namePattern, 
+    spNameSubstr = spNameSubstr, 
     .studyAreaName = .studyAreaName,
     rasterToMatchLocation = locationRasterToMatch,
     rasterToMatchName = rasterToMatchName,
     studyAreaLocation = locationStudyArea,
-    nameBCR = nameBCR,
     excludeList = excludeList,
-    areaThreshold = 0.01,
-    probOfOccurrenceThreshold = 0.25,
-    saveLocation = saveLocation,
-    nameBirdList = nameBirdList
-  )
+    areaThreshold = 0.25,
+    probOfOccurrenceThreshold = 0.05
+    )
 )
 
 ## Simulation setup
