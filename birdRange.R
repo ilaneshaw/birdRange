@@ -259,10 +259,12 @@ selectSps <- function(sim) {
   sim$spList <- lapply(X = sim$spList, FUN = function(sp) {
     tryCatch(
       {
-    
+   
         spRaster <- sim$spRasters[[sp]]
-        hist(spRaster)
+        hist(spRaster, breaks = 50)
 
+#         clearPlot()
+# Plot(spRaster, title = sp) 
         ## Get raster density values 
         densityValues <- terra::values(spRaster)
         densityValues <- na.omit(densityValues)
@@ -287,7 +289,7 @@ selectSps <- function(sim) {
       }
     )
   })
-
+  
   sim$spList <- unlist(sim$spList, use.names = FALSE)
   sim$spList <- na.omit(sim$spList)
   sim$spList <- setdiff(sim$spList, P(sim)$excludeList)
@@ -391,7 +393,10 @@ Event2 <- function(sim) {
     spName <- substr(ras, P(sim)$spNameSubst[1], P(sim)$spNameSubst[2]) 
     names(spRas) <- spName
     
-   # postprocess raster - cropping, masking to the study area and reprojecting to the rasterToMatch
+    # clearPlot()
+    # Plot(spRas, title = spName)
+    # 
+    # postprocess raster - cropping, masking to the study area and reprojecting to the rasterToMatch
    spRas <- reproducible::postProcessTo(
      from = spRas,
      to = sim$rasterToMatch,
