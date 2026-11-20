@@ -296,17 +296,30 @@ selectSps <- function(sim) {
 
   print("spList: sps that meet Thresholds and were not on exclude list")
   print(sim$spList)
-
+  
   
   # rejectSp ----
   sim$rejectSps <- setdiff(sim$inputSpRas, sim$spList)
-  
+ 
   print("rejectSp: sps that did not meet threshold, or were on the excludeList")
   print(sim$rejectSps)
+  
 
+  #make tab
+  species <- c(sim$spList, sim$rejectSps)
+  status <-  c(rep("include", times = length(sim$spList)), 
+               rep("exclude", times = length(sim$rejectSps)))
+  spListTab <- cbind(species, status)
+  spListTab
+  
+  #save
+  tabName <- paste("spList.csv", sep = "")
+  write.csv(spListTab, file = file.path(sim$outputPredsLocation, tabName))
+  
   # amend spRasters ----
   # remove all rasters not on spList
-  
+  sim$spRasters <- sim$spRasters[sim$spList]
+  browser()
   
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
